@@ -1,4 +1,11 @@
 
+(** Abstract binding trees.
+
+    Original design is taken from the homework assignment here
+    http://www.cs.cmu.edu/~rjsimmon/15312-s14/hws/hw1update2-handout.pdf
+
+*)
+
 module type Variable = sig
   type t
   val equal : t -> t -> bool
