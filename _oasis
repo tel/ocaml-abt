@@ -1,0 +1,29 @@
+OASISFormat: 0.4
+Name:        abt
+Version:     0.1.0
+Synopsis:    Abstract binding trees.
+Authors:     Joseph Abrahamson <me@jspha.com>
+License:     BSD-3-clause
+Plugins:     META (0.4), DevFiles (0.4)
+
+Library abt
+  Path:            src
+  FindlibName:     abt
+  Pack:            true
+  BuildTools:      ocamlbuild
+  Modules:         Abt
+  
+AlphaFeatures: ocamlbuild_more_args
+Document abt_api
+  Type: ocamlbuild (0.4)
+  BuildTools: ocamlbuild, ocamldoc
+
+  Title: API reference for Abt
+  XOCamlbuildPath: .
+  XOCamlbuildExtraArgs:
+    "-docflags '-colorize-code -short-functors -charset utf-8'"
+  XOCamlbuildLibraries: abt
+
+SourceRepository abt
+  Type:     git
+  Location: https://github.com/tel/ocaml-abt

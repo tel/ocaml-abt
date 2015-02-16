@@ -1,0 +1,11 @@
+# OASIS_START
+# DO NOT EDIT (digest: b4a1497cda59a4f69590b464bca5ad8f)
+version = "0.1.0"
+description = "Abstract binding trees."
+archive(byte) = "abt.cma"
+archive(byte, plugin) = "abt.cma"
+archive(native) = "abt.cmxa"
+archive(native, plugin) = "abt.cmxs"
+exists_if = "abt.cma"
+# OASIS_STOP
+
