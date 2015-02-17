@@ -8,8 +8,21 @@
 
 module type Variable = sig
   type t
+  val fresh : string -> t
   val equal : t -> t -> bool
-  val fresh : unit -> t
+  val compare : t -> t -> int
+  val to_string : t -> string
+  val to_user_string : t -> string
+end
+
+module Var : Variable = struct
+  type t = string * int
+  let counter = ref 0
+  let fresh n = (n, (counter := !counter + 1; !counter))
+  let equal (_, id1) (_, id2) = id1 = id2
+  let compare (_, id1) (_, id2) = id2 - id1
+  let to_string (s, n) = s ^ "@" ^ string_of_int n
+  let to_user_string (s, _) = s
 end
 
 module type Operator = sig
@@ -71,7 +84,6 @@ struct
     | Operator of Operator.t * t list
 
   exception Malformed
-  exception NotImplemented
 
   let rec map_variables
       (free  : int -> Variable.t -> t)
@@ -85,30 +97,38 @@ struct
       | Operator (o, ts) -> Operator (o, List.map (aux l) ts)
     in aux 0 tm
   
-  let bind (tm : t) (v : Variable.t) : t =
-    let free n v' = if V.equal v v' then Bound n else Free v' in
+  let bind (v : Variable.t) (tm : t) : t =
+    let free n v' = if Variable.equal v v' then Bound n else Free v' in
     let bound n m = Bound m in
     Lambda (map_variables free bound tm)
 
-  let unbind (tm0 : t) : Variable.t * t =
-    match tm0 with
-    | Lambda tm ->
-      let v = V.fresh () in
-      let free n v' = if V.equal v v' then raise Malformed else Free v' in
-      let bound _ m = if m = 0 then Free v else Bound m in
-      (v, map_variables free bound tm)
-    | _ -> raise Malformed
+  (** Invariant, this is a term just underneath a lambda binder *)
+  let unbind (tm : t) : Variable.t * t =
+    let v = Variable.fresh "x" in
+    let free n v' = if Variable.equal v v' then raise Malformed else Free v' in
+    let bound _ m = if m = 0 then Free v else Bound m in
+    (v, map_variables free bound tm)
   
-  let into x = raise NotImplemented
+  let into = function
+    | V v -> Free v
+    | L (v, tm) -> bind v tm
+    | A (op, args) ->
+      if (List.length (Operator.arity op) = List.length args)
+      then Operator (op, args)
+      else raise Malformed
       
-  let out x = raise NotImplemented
+  let out = function
+    | Free v -> V v
+    | Bound _ -> raise Malformed
+    | Lambda tm -> let (var, tm') = unbind tm in L (var, tm')
+    | Operator (op, args) -> A (op, args)
       
   let rec aequiv x y = match x, y with
     | Free vx            , Free vy            -> V.equal vx vy
     | Bound nx           , Bound ny           -> nx = ny
     | Lambda tx          , Lambda ty          -> aequiv tx ty
     | Operator (ox, axs) , Operator (oy, ays) ->
-      O.equal ox oy && List.for_all2 aequiv axs ays
+      Operator.equal ox oy && List.for_all2 aequiv axs ays
     | _                  , _                  -> false
       
   let map f = function
@@ -117,3 +137,76 @@ struct
     | A (o, al) -> A (o, List.map f al)
             
 end
+
+module type Abt_Util = sig
+  include Abt
+
+  val freevars : t -> Variable.t list
+  val subst : t -> Variable.t -> t -> t
+
+  val var  : Variable.t -> t
+  val lam  : Variable.t * t -> t
+  val ($$) : Operator.t -> t list -> t
+end
+
+module Abt_Util (A : Abt) = struct
+  include A
+
+  let var v        = into (V v)
+  let lam (v, e)   = into (L (v, e))
+  let ($$) op args = into (A (op, args))
+
+  let rec subst tm var exp =
+    match out exp with
+    | V v -> if Variable.equal var v then tm else exp
+    | L (v, exp') -> lam (v, subst tm var exp')
+    | A (op, args) -> op $$ List.map (subst tm var) args
+
+  module VarSet : Set.S with type elt := Variable.t
+    = Set.Make(Variable)
+  
+  let freevars exp =
+    let rec aux exp =
+      match out exp with
+      | V v          -> VarSet.singleton v
+      | L (v, exp')  -> VarSet.remove v (aux exp')
+      | A (op, exps) -> List.fold_left VarSet.union VarSet.empty (List.map aux exps)
+    in VarSet.elements (aux exp)
+  
+end
+
+module TermOps = struct
+
+  type t = Num of int | Str of string | Plus | Times | Cat | Len | Let
+
+  let arity = function
+    | Num n -> []
+    | Str s -> []
+    | Plus  -> [0; 0]
+    | Times -> [0; 0]
+    | Cat   -> [0; 0]
+    | Len   -> [0]
+    | Let   -> [0; 1]
+
+  let equal a b = match a, b with
+    | Num n, Num m -> n = m
+    | Str s, Str t -> s = t
+    | Plus , Plus  -> true
+    | Times, Times -> true
+    | Cat  , Cat   -> true
+    | Len  , Len   -> true
+    | Let  , Let   -> true
+    | _    , _     -> false
+  
+  let to_string = function
+    | Num n -> string_of_int n
+    | Str s -> "\""^s^"\""
+    | Plus  -> "plus"
+    | Times -> "times"
+    | Cat   -> "cat"
+    | Len   -> "len"
+    | Let   -> "let"
+      
+end
+
+module Term = Abt_Util(Abt(Var) (TermOps))
