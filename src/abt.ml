@@ -71,7 +71,7 @@ module Abt (V : Variable) (O : Operator) : Abt
 struct
   module Variable = V
   module Operator = O
-    
+
   type 'a view =
     | V of Variable.t
     | L of Variable.t * 'a
@@ -96,7 +96,7 @@ struct
       | Lambda t -> Lambda (aux (l+1) t)
       | Operator (o, ts) -> Operator (o, List.map (aux l) ts)
     in aux 0 tm
-  
+
   let bind (v : Variable.t) (tm : t) : t =
     let free n v' = if Variable.equal v v' then Bound n else Free v' in
     let bound n m = Bound m in
@@ -108,7 +108,7 @@ struct
     let free n v' = if Variable.equal v v' then raise Malformed else Free v' in
     let bound _ m = if m = 0 then Free v else Bound m in
     (v, map_variables free bound tm)
-  
+
   let into = function
     | V v -> Free v
     | L (v, tm) -> bind v tm
@@ -116,13 +116,13 @@ struct
       if (List.length (Operator.arity op) = List.length args)
       then Operator (op, args)
       else raise Malformed
-      
+
   let out = function
     | Free v -> V v
     | Bound _ -> raise Malformed
     | Lambda tm -> let (var, tm') = unbind tm in L (var, tm')
     | Operator (op, args) -> A (op, args)
-      
+
   let rec aequiv x y = match x, y with
     | Free vx            , Free vy            -> V.equal vx vy
     | Bound nx           , Bound ny           -> nx = ny
@@ -130,12 +130,12 @@ struct
     | Operator (ox, axs) , Operator (oy, ays) ->
       Operator.equal ox oy && List.for_all2 aequiv axs ays
     | _                  , _                  -> false
-      
+
   let map f = function
     | V v -> V v
     | L (v, a)  -> L (v, f a)
     | A (o, al) -> A (o, List.map f al)
-            
+
 end
 
 module type Abt_Util = sig
@@ -164,7 +164,7 @@ module Abt_Util (A : Abt) = struct
 
   module VarSet : Set.S with type elt := Variable.t
     = Set.Make(Variable)
-  
+
   let freevars exp =
     let rec aux exp =
       match out exp with
@@ -172,7 +172,7 @@ module Abt_Util (A : Abt) = struct
       | L (v, exp')  -> VarSet.remove v (aux exp')
       | A (op, exps) -> List.fold_left VarSet.union VarSet.empty (List.map aux exps)
     in VarSet.elements (aux exp)
-  
+
 end
 
 module TermOps = struct
@@ -197,7 +197,7 @@ module TermOps = struct
     | Len  , Len   -> true
     | Let  , Let   -> true
     | _    , _     -> false
-  
+
   let to_string = function
     | Num n -> string_of_int n
     | Str s -> "\""^s^"\""
@@ -206,7 +206,7 @@ module TermOps = struct
     | Cat   -> "cat"
     | Len   -> "len"
     | Let   -> "let"
-      
+
 end
 
 module Term = Abt_Util(Abt(Var) (TermOps))
