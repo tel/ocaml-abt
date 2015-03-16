@@ -4,6 +4,13 @@
     Original design is taken from the homework assignment here
     http://www.cs.cmu.edu/~rjsimmon/15312-s14/hws/hw1update2-handout.pdf
 
+    Design also inspired by Neel Krishnaswami's design at
+    http://semantic-domain.blogspot.com/2015/03/abstract-binding-trees.html
+
+    The standard formalization is due to Robert Harper in PFPL. The original
+    inspiration comes from Per Martin-Lof's "Method of Arities"
+    http://www.cse.chalmers.se/research/group/logic/book/book.pdf
+
 *)
 
 module type Variable = sig
