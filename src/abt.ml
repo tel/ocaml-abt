@@ -113,7 +113,7 @@ struct
   let unbind (tm : t) : Variable.t * t =
     let v = Variable.fresh "x" in
     let free n v' = if Variable.equal v v' then raise Malformed else Free v' in
-    let bound _ m = if m = 0 then Free v else Bound m in
+    let bound n m = if n = m then Free v else Bound m in
     (v, map_variables free bound tm)
 
   let into = function
